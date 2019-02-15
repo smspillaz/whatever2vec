@@ -26,12 +26,12 @@ def get_text_for_gow(file, min_num_tokens=7, stopwords=None, lemmatize=None, ste
     return documents
 
 
-def terms_to_graph(documents, w, weight_type='co-occurences'):
+def terms_to_graph(documents, w, weight_type='co-occurrences'):
     """
     Constructs a dictionary of tuples/edges -> weights
     :param documents: list of list of tokens
     :param w: window size
-    :param weight_type: ('co-occurences', 'inverse_distance', 'cosine_similarity')
+    :param weight_type: ('co-occurrences', 'inverse_distance', 'cosine_similarity')
     :return: dictionary of edge data
     """
     from_to = {}
