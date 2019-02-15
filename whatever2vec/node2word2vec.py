@@ -1,0 +1,126 @@
+import argparse
+import itertools
+import networkx as nx
+import matplotlib.pyplot as plt
+from node2vec import Node2Vec
+from gensim.models import KeyedVectors
+
+
+from .utils import EpochLogging, yield_sentences, clean_terms
+
+
+def get_text_for_gow(dataset, min_num_tokens=7, stopwords=None, lemmatize=None, stem=None, only_tags=None):
+    documents = list(yield_sentences(dataset, min_num_tokens=min_num_tokens))
+    if stopwords or lemmatize or stem or only_tags:
+        documents = [clean_terms(doc, stopwords, lemmatize, stem, only_tags) for doc in documents]
+    return documents
+
+
+def terms_to_graph(documents, w):  # terms=list w=window size
+    from_to = {}
+
+    for terms in documents:
+        w = min(w, len(terms))
+        # create initial graph (first w terms)
+        terms_temp = terms[0:w]
+        indexes = list(itertools.combinations(range(w), r=2))
+
+        new_edges = list()
+
+        for i in range(len(indexes)):
+            new_edges.append(" ".join(list(terms_temp[i] for i in indexes[i])))
+        for i in range(0, len(new_edges)):
+            from_to[new_edges[i].split()[0], new_edges[i].split()[1]] = 1
+
+        # then iterate over the remaining terms
+        for i in range(w, len(terms)):
+            # term to consider
+            considered_term = terms[i]
+            # all terms within sliding window
+            terms_temp = terms[(i - w + 1):(i + 1)]
+
+            # edges to try
+            candidate_edges = list()
+            for p in range(w - 1):
+                candidate_edges.append((terms_temp[p], considered_term))
+
+            for try_edge in candidate_edges:
+                # if not self-edge
+                if try_edge[1] != try_edge[0]:
+                    boolean1 = (try_edge[0], try_edge[1]) in from_to
+                    boolean2 = (try_edge[1], try_edge[0]) in from_to
+                    # if edge has already been seen, update its weight
+                    if boolean1:
+                        from_to[try_edge[0], try_edge[1]] += 1
+                    elif boolean2:
+                        from_to[try_edge[1], try_edge[0]] += 1
+                    # if edge has never been seen, create it and assign it a unit weight
+                    else:
+                        from_to[try_edge] = 1
+    return from_to
+
+
+def train(G, dimensions=150, walk_length=10, num_walks=10, workers=4, temp_folder='node2vec_temp', save=None):
+    # Precompute probabilities and generate walks
+    node2vec = Node2Vec(
+        graph=G,
+        dimensions=dimensions,
+        walk_length=walk_length,
+        num_walks=num_walks,
+        workers=workers,
+        temp_folder=temp_folder
+    )
+    # Embed nodes
+    # Any keywords acceptable by gensim.Word2Vec can be passed.
+    # `dimensions` and `workers` are automatically passed (from the Node2Vec constructor)
+    model = node2vec.fit(
+        window=10,
+        min_count=2,
+        workers=10,
+        callbacks=[EpochLogging()]
+    )
+    if save:
+        # Save embeddings for later use
+        model.wv.save_word2vec_format(save)
+    return model.wv
+
+
+def dict_to_networkx(g_dict, name=None):
+    G = nx.Graph()
+    G.name = name
+    for edge, weight in g_dict.items():
+        G.add_edge(*edge, weight=weight)
+    return G
+
+
+def plot_degree_histogram(G):
+    degree_sequence = sorted([d for n, d in G.degree()], reverse=True)
+    plt.hist(degree_sequence)
+    plt.yscale('log')
+    plt.title("Degree Histogram")
+    plt.ylabel("Count")
+    plt.xlabel("Degree")
+    plt.show()
+
+
+def main():
+    parser = argparse.ArgumentParser("Train word2vec")
+    parser.add_argument("--train", type=str, help="The training sentences file")
+    parser.add_argument("--valid", type=str, help="The validation sentences file")
+    parser.add_argument("--test", type=str, help="The test sentences file")
+    parser.add_argument("--save", type=str, help="Where to save the model to")
+    parser.add_argument("--load", type=str, help="Where to load the model from")
+    args = parser.parse_args()
+
+    if args.load:
+        vectors = KeyedVectors.load(args.load, mmap='r')
+    else:
+        documents = get_text_for_gow(args.train)
+        gow_dict = terms_to_graph(documents, w=10)
+        G = dict_to_networkx(gow_dict)
+        plot_degree_histogram(G)
+        vectors = train(G, save=args.save)
+
+
+if __name__ == "__main__":
+    main()

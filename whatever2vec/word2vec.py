@@ -1,21 +1,8 @@
 import argparse
 import gensim
-from tqdm import tqdm
-from gensim.models.callbacks import CallbackAny2Vec
 from gensim.models import KeyedVectors
 
-
-class EpochLogging(CallbackAny2Vec):
-    def __init__(self):
-        super().__init__()
-        self.epoch = 0
-
-    def on_epoch_begin(self, model):
-        print('Started epoch {}'.format(self.epoch))
-
-    def on_epoch_end(self, model):
-        print('Finished epoch {}'.format(self.epoch))
-        self.epoch += 1
+from .utils import EpochLogging, yield_sentences
 
 
 def train(documents, size=150, window=10, save=None):
@@ -35,14 +22,8 @@ def train(documents, size=150, window=10, save=None):
     return model.wv
 
 
-def yield_sentences(filename):
-    with open(filename, "r") as f:
-        for sentence in tqdm(f, desc='Reading training data'):
-            yield gensim.utils.simple_preprocess(sentence)
-
-
 def main():
-    parser = argparse.ArgumentParser("Train word2vec")
+    parser = argparse.ArgumentParser("Train node2word2vec")
     parser.add_argument("--train", type=str, help="The training sentences file")
     parser.add_argument("--valid", type=str, help="The validation sentences file")
     parser.add_argument("--test", type=str, help="The test sentences file")
@@ -54,7 +35,6 @@ def main():
         vectors = KeyedVectors.load(args.load, mmap='r')
     else:
         vectors = train(list(yield_sentences(args.train)), save=args.save)
-
 
 
 if __name__ == "__main__":
