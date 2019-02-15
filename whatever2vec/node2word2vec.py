@@ -9,14 +9,31 @@ from gensim.models import KeyedVectors
 from .utils import EpochLogging, yield_sentences, clean_terms
 
 
-def get_text_for_gow(dataset, min_num_tokens=7, stopwords=None, lemmatize=None, stem=None, only_tags=None):
-    documents = list(yield_sentences(dataset, min_num_tokens=min_num_tokens))
+def get_text_for_gow(file, min_num_tokens=7, stopwords=None, lemmatize=None, stem=None, only_tags=None):
+    """
+    Get list of lists of tokens from each document by applying preprocessing.
+    :param file: path to the dataset
+    :param min_num_tokens: discard every list of tokens (document) with length < this
+    :param stopwords: list of stopwords
+    :param lemmatize: boolean, whether you want to lemmatize the terms or not
+    :param stem: boolean, whether you want to stem the terms or not
+    :param only_tags: list of tags you want to keep, for example only nouns (NN)
+    :return:
+    """
+    documents = list(yield_sentences(file, min_num_tokens=min_num_tokens))
     if stopwords or lemmatize or stem or only_tags:
         documents = [clean_terms(doc, stopwords, lemmatize, stem, only_tags) for doc in documents]
     return documents
 
 
-def terms_to_graph(documents, w):  # terms=list w=window size
+def terms_to_graph(documents, w, weight_type='co-occurences'):
+    """
+    Constructs a dictionary of tuples/edges -> weights
+    :param documents: list of list of tokens
+    :param w: window size
+    :param weight_type: ('co-occurences', 'inverse_distance', 'cosine_similarity')
+    :return: dictionary of edge data
+    """
     from_to = {}
 
     for terms in documents:
@@ -61,6 +78,17 @@ def terms_to_graph(documents, w):  # terms=list w=window size
 
 
 def train(G, dimensions=150, walk_length=10, num_walks=10, workers=4, temp_folder='node2vec_temp', save=None):
+    """
+    Trains the node2vec model on the given graph
+    :param G: the graph
+    :param dimensions: embeddings dimension
+    :param walk_length: the length of the random walks
+    :param num_walks: the number of the random walks
+    :param workers: number of threads (for Windows it only works with 1 worker)
+    :param temp_folder: folder to store temp data during the parallel process when the graph is big
+    :param save: filepath to save the embeddings in word2vec format
+    :return:
+    """
     # Precompute probabilities and generate walks
     node2vec = Node2Vec(
         graph=G,
@@ -86,6 +114,12 @@ def train(G, dimensions=150, walk_length=10, num_walks=10, workers=4, temp_folde
 
 
 def dict_to_networkx(g_dict, name=None):
+    """
+    Transforms the edge data dictionary to NetworkX graph
+    :param g_dict: edge data dictionary
+    :param name: name of the graph
+    :return: nx.Graph
+    """
     G = nx.Graph()
     G.name = name
     for edge, weight in g_dict.items():
@@ -93,10 +127,16 @@ def dict_to_networkx(g_dict, name=None):
     return G
 
 
-def plot_degree_histogram(G):
+def plot_degree_histogram(G, log_yscale=True):
+    """
+    Plots the histogram of the degree
+    :param G: nx.Graph
+    :param log_yscale: if True, pyplot's yscale is log
+    """
     degree_sequence = sorted([d for n, d in G.degree()], reverse=True)
     plt.hist(degree_sequence)
-    plt.yscale('log')
+    if log_yscale:
+        plt.yscale('log')
     plt.title("Degree Histogram")
     plt.ylabel("Count")
     plt.xlabel("Degree")
