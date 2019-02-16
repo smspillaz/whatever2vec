@@ -1,4 +1,3 @@
-import argparse
 import itertools
 import networkx as nx
 import matplotlib.pyplot as plt

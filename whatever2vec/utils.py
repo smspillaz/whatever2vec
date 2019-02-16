@@ -49,7 +49,7 @@ def clean_terms(terms, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags
         terms = [t for t in terms if t not in stopwords]
     if only_tags:
         tagged = nltk.pos_tag(terms)
-        terms = [t for t, pos in tagged if pos in tags]
+        terms = [t for t, pos in tagged if pos in only_tags]
     if lemmatize:
         lem = WordNetLemmatizer()
         terms = [lem.lemmatize(t) for t in terms]
