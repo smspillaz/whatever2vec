@@ -2,7 +2,7 @@ import argparse
 import gensim
 from gensim.models import KeyedVectors
 
-from .utils import EpochLogging, yield_sentences
+from .utils import EpochLogging, yield_sentences, options
 
 
 def train(documents, size=150, window=10, save=None):
@@ -23,13 +23,7 @@ def train(documents, size=150, window=10, save=None):
 
 
 def main():
-    parser = argparse.ArgumentParser("Train node2word2vec")
-    parser.add_argument("--train", type=str, help="The training sentences file")
-    parser.add_argument("--valid", type=str, help="The validation sentences file")
-    parser.add_argument("--test", type=str, help="The test sentences file")
-    parser.add_argument("--save", type=str, help="Where to save the model to")
-    parser.add_argument("--load", type=str, help="Where to load the model from")
-    args = parser.parse_args()
+    args = options('Train word2vec')
 
     if args.load:
         vectors = KeyedVectors.load(args.load, mmap='r')

@@ -6,7 +6,7 @@ from node2vec import Node2Vec
 from gensim.models import KeyedVectors
 
 
-from .utils import EpochLogging, yield_sentences, clean_terms
+from .utils import EpochLogging, yield_sentences, clean_terms, options
 
 
 def get_text_for_gow(file, min_num_tokens=7, stopwords=None, lemmatize=None, stem=None, only_tags=None):
@@ -144,13 +144,7 @@ def plot_degree_histogram(G, log_yscale=True):
 
 
 def main():
-    parser = argparse.ArgumentParser("Train word2vec")
-    parser.add_argument("--train", type=str, help="The training sentences file")
-    parser.add_argument("--valid", type=str, help="The validation sentences file")
-    parser.add_argument("--test", type=str, help="The test sentences file")
-    parser.add_argument("--save", type=str, help="Where to save the model to")
-    parser.add_argument("--load", type=str, help="Where to load the model from")
-    args = parser.parse_args()
+    args = options('Train word2node2vec')
 
     if args.load:
         vectors = KeyedVectors.load(args.load, mmap='r')

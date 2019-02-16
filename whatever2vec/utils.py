@@ -1,3 +1,5 @@
+import argparse
+
 import nltk
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 import gensim
@@ -55,3 +57,13 @@ def clean_terms(terms, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags
         stem = PorterStemmer()
         terms = [stem.stem(t) for t in terms]
     return terms
+
+
+def options(model_name):
+    parser = argparse.ArgumentParser(model_name)
+    parser.add_argument("--train", type=str, help="The training sentences file")
+    parser.add_argument("--valid", type=str, help="The validation sentences file")
+    parser.add_argument("--test", type=str, help="The test sentences file")
+    parser.add_argument("--save", type=str, help="Where to save the model to")
+    parser.add_argument("--load", type=str, help="Where to load the model from")
+    return parser.parse_args()
