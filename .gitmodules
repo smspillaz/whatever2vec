@@ -1,3 +1,6 @@
 [submodule "submodules/awd-lstm-lm"]
 	path = submodules/awd-lstm-lm
 	url = git://github.com/salesforce/awd-lstm-lm
+[submodule "submodules/word-benchmarks"]
+	path = submodules/word-benchmarks
+	url = git://github.com/vecto-ai/word-benchmarks
