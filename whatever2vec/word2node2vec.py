@@ -3,12 +3,12 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from node2vec import Node2Vec
 from gensim.models import KeyedVectors
+from gensim.parsing.preprocessing import STOPWORDS
+
+from utils import EpochLogging, yield_sentences, clean_terms, options
 
 
-from .utils import EpochLogging, yield_sentences, clean_terms, options
-
-
-def get_text_for_gow(file, min_num_tokens=7, stopwords=None, lemmatize=None, stem=None, only_tags=None):
+def get_text_for_gow(file, min_num_tokens=6, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags=None):
     """
     Get list of lists of tokens from each document by applying preprocessing.
     :param file: path to the dataset
@@ -19,7 +19,7 @@ def get_text_for_gow(file, min_num_tokens=7, stopwords=None, lemmatize=None, ste
     :param only_tags: list of tags you want to keep, for example only nouns (NN)
     :return:
     """
-    documents = list(yield_sentences(file, min_num_tokens=min_num_tokens))
+    documents = list(yield_sentences(file, min_num_tokens=min_num_tokens, subsample=None))
     if stopwords or lemmatize or stem or only_tags:
         documents = [clean_terms(doc, stopwords, lemmatize, stem, only_tags) for doc in documents]
     return documents
@@ -76,7 +76,7 @@ def terms_to_graph(documents, w, weight_type='co-occurrences'):
     return from_to
 
 
-def train(G, dimensions=150, walk_length=10, num_walks=10, workers=4, temp_folder='node2vec_temp', save=None):
+def train(G, dimensions=50, walk_length=30, num_walks=200, workers=10, temp_folder='node2vec_temp', save=None):
     """
     Trains the node2vec model on the given graph
     :param G: the graph
@@ -103,12 +103,13 @@ def train(G, dimensions=150, walk_length=10, num_walks=10, workers=4, temp_folde
     model = node2vec.fit(
         window=10,
         min_count=2,
-        workers=10,
+        workers=workers,
         callbacks=[EpochLogging()]
     )
     if save:
-        # Save embeddings for later use
+        # Save model embeddings for later use
         model.wv.save_word2vec_format(save)
+        #model.save(save)
     return model.wv
 
 
@@ -123,6 +124,8 @@ def dict_to_networkx(g_dict, name=None):
     G.name = name
     for edge, weight in g_dict.items():
         G.add_edge(*edge, weight=weight)
+    print(G.number_of_nodes())
+    print(G.number_of_edges())
     return G
 
 
@@ -148,11 +151,11 @@ def main():
     if args.load:
         vectors = KeyedVectors.load(args.load, mmap='r')
     else:
-        documents = get_text_for_gow(args.train)
+        documents = get_text_for_gow(args.train, lemmatize=None)
         gow_dict = terms_to_graph(documents, w=10)
         G = dict_to_networkx(gow_dict)
-        plot_degree_histogram(G)
-        vectors = train(G, save=args.save)
+        # plot_degree_histogram(G)
+        vectors = train(G, save=args.save, dimensions=50)
 
 
 if __name__ == "__main__":

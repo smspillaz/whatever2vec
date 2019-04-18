@@ -6,6 +6,7 @@ import gensim
 from gensim.models.callbacks import CallbackAny2Vec
 from gensim.parsing.preprocessing import STOPWORDS
 from tqdm.auto import tqdm
+import numpy as np
 
 
 class EpochLogging(CallbackAny2Vec):
@@ -21,7 +22,7 @@ class EpochLogging(CallbackAny2Vec):
         self.epoch += 1
 
 
-def yield_sentences(filename, min_num_tokens=0):
+def yield_sentences(filename, min_num_tokens=3, subsample=None):
     """
     Yields the tokens of every document in a list of lists in lowercase.
     :param filename: the path to the dataset
@@ -30,9 +31,11 @@ def yield_sentences(filename, min_num_tokens=0):
     """
     with open(filename, "r") as f:
         for sentence in tqdm(f, desc='Reading training data'):
-            terms = gensim.utils.simple_preprocess(sentence)
-            if len(terms) >= min_num_tokens:
-                yield terms
+        #for sentence in f:
+            if subsample is None or subsample is False or np.random.uniform(0, 1) <= subsample:
+                terms = gensim.utils.simple_preprocess(sentence)
+                if len(terms) >= min_num_tokens:
+                    yield terms
 
 
 def clean_terms(terms, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags=None):
