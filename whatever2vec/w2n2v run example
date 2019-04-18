@@ -1,0 +1,2 @@
+python word2node2vec.py --train ../data/wiki.train.tokens --valid ../data/wiki.valid.tokens --test ../data/wiki.test.tokens --save vecs.out
+
