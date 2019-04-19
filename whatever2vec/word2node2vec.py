@@ -8,7 +8,7 @@ from gensim.parsing.preprocessing import STOPWORDS
 from utils import EpochLogging, yield_sentences, clean_terms, options
 
 
-def get_text_for_gow(file, min_num_tokens=6, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags=None):
+def get_text_for_gow(file, min_num_tokens=5, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags=None):
     """
     Get list of lists of tokens from each document by applying preprocessing.
     :param file: path to the dataset
@@ -76,7 +76,7 @@ def terms_to_graph(documents, w, weight_type='co-occurrences'):
     return from_to
 
 
-def train(G, dimensions=50, walk_length=30, num_walks=200, workers=10, temp_folder='node2vec_temp', save=None):
+def train(G, dimensions=50, walk_length=35, num_walks=300, workers=10, temp_folder='node2vec_temp', save=None):
     """
     Trains the node2vec model on the given graph
     :param G: the graph
@@ -155,7 +155,7 @@ def main():
         gow_dict = terms_to_graph(documents, w=10)
         G = dict_to_networkx(gow_dict)
         # plot_degree_histogram(G)
-        vectors = train(G, save=args.save, dimensions=50)
+        vectors = train(G, save=args.save, dimensions=150)
 
 
 if __name__ == "__main__":
