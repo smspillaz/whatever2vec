@@ -8,7 +8,7 @@ from sklearn.decomposition import MiniBatchDictionaryLearning
 
 TRAIN = True
 ANALYZE = True
-words = ["bank", "cut", "bass", "tie"]
+words = ["bank", "cut", "bass", "tie", "chips", "mouse", "crane"]
 
 def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
     embeddings = pd.DataFrame(model_wv.wv.syn0[:restrict_vocab])
@@ -31,8 +31,10 @@ if TRAIN:
     # Train dictionary learning model
     num_cpus = multiprocessing.cpu_count()
     X = selected_df.values
-    dictionary = MiniBatchDictionaryLearning(n_components=2000, fit_algorithm='lars', transform_algorithm='lars',
-                                             transform_n_nonzero_coefs=5, verbose=1, n_jobs=num_cpus, batch_size=16, n_iter=1000)
+    dictionary = MiniBatchDictionaryLearning(n_components=2000, fit_algorithm='lars',
+                                             transform_algorithm='lars',
+                                             transform_n_nonzero_coefs=5, verbose=1,
+                                             n_jobs=num_cpus, batch_size=16, n_iter=1000)
     start = time.time()
     dictionary.fit(X)
     elapsed = time.time() - start
@@ -40,7 +42,7 @@ if TRAIN:
 
     # Save model
     with open('dictionary.model', 'wb') as f:
-        pickle.dump(model, f)
+        pickle.dump(dictionary, f)
 
 # Analyze "atoms of discourse"
 if ANALYZE:
@@ -48,10 +50,12 @@ if ANALYZE:
         dictionary = pickle.load(f)
     basis_vectors = dictionary.components_
     for word in words:
-        embedding = model_wv.get_vector(word)
-        sparse_code = dictionary.transform(embedding)
+        print(f"\n\tWord: {word}")
+        embedding = model_wv.get_vector(word)  # (50, )
+        sparse_code = dictionary.transform(embedding.reshape(1, -1))  # (1, 2000)
+        sparse_code = sparse_code.flatten()  # (2000, )
         activated_atoms = sparse_code > 0
-        print("\tAtoms: " + str(np.arange(len(sparse_code))[activated_atoms]))
+        print("\n\tAtoms: " + str(np.where(sparse_code > 0)))
         activated_atoms = dictionary.components_[activated_atoms]
         # Get closest words to each atom of discourse
         for i, atom in enumerate(activated_atoms):
