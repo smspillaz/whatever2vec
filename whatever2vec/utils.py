@@ -31,7 +31,6 @@ def yield_sentences(filename, min_num_tokens=3, subsample=None):
     """
     with open(filename, "r") as f:
         for sentence in tqdm(f, desc='Reading training data'):
-        #for sentence in f:
             if subsample is None or subsample is False or np.random.uniform(0, 1) <= subsample:
                 terms = gensim.utils.simple_preprocess(sentence)
                 if len(terms) >= min_num_tokens:
