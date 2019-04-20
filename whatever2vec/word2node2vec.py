@@ -5,7 +5,7 @@ from node2vec import Node2Vec
 from gensim.models import KeyedVectors
 from gensim.parsing.preprocessing import STOPWORDS
 
-from utils import EpochLogging, yield_sentences, clean_terms, options
+from .utils import EpochLogging, yield_sentences, clean_terms, options
 
 
 def get_text_for_gow(file, min_num_tokens=5, stopwords=STOPWORDS, lemmatize=None, stem=None, only_tags=None):
@@ -25,16 +25,16 @@ def get_text_for_gow(file, min_num_tokens=5, stopwords=STOPWORDS, lemmatize=None
     return documents
 
 
-def terms_to_graph(documents, w, weight_type='co-occurrences'):
+def terms_to_graph_dict(documents, w=3):
     """
     Constructs a dictionary of tuples/edges -> weights
     :param documents: list of list of tokens
     :param w: window size
-    :param weight_type: ('co-occurrences', 'inverse_distance', 'cosine_similarity')
     :return: dictionary of edge data
     """
     from_to = {}
-
+    if w < 2:
+        w = 2
     for terms in documents:
         w = min(w, len(terms))
         # create initial graph (first w terms)
@@ -101,8 +101,8 @@ def train(G, dimensions=50, walk_length=35, num_walks=300, workers=10, temp_fold
     # Any keywords acceptable by gensim.Word2Vec can be passed.
     # `dimensions` and `workers` are automatically passed (from the Node2Vec constructor)
     model = node2vec.fit(
-        window=10,
         min_count=2,
+        window=10,
         workers=workers,
         callbacks=[EpochLogging()]
     )
@@ -113,19 +113,22 @@ def train(G, dimensions=50, walk_length=35, num_walks=300, workers=10, temp_fold
     return model.wv
 
 
-def dict_to_networkx(g_dict, name=None):
+def dict_to_networkx(g_dict, name=None, directed=True):
     """
     Transforms the edge data dictionary to NetworkX graph
     :param g_dict: edge data dictionary
     :param name: name of the graph
     :return: nx.Graph
     """
-    G = nx.Graph()
+    if directed:
+        G = nx.DiGraph()
+    else:
+        G = nx.Graph()
     G.name = name
     for edge, weight in g_dict.items():
         G.add_edge(*edge, weight=weight)
-    print(G.number_of_nodes())
-    print(G.number_of_edges())
+    print("#Nodes:", G.number_of_nodes())
+    print("#Edges:", G.number_of_edges())
     return G
 
 
@@ -152,8 +155,8 @@ def main():
         vectors = KeyedVectors.load(args.load, mmap='r')
     else:
         documents = get_text_for_gow(args.train, lemmatize=None)
-        gow_dict = terms_to_graph(documents, w=10)
-        G = dict_to_networkx(gow_dict)
+        gow_dict = terms_to_graph_dict(documents, w=10)
+        G = dict_to_networkx(gow_dict, directed=True)
         # plot_degree_histogram(G)
         vectors = train(G, save=args.save, dimensions=150)
 
