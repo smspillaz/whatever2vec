@@ -1,4 +1,5 @@
 import multiprocessing
+import numpy as np
 import pandas as pd
 import pickle
 import time
@@ -6,8 +7,9 @@ from datetime import timedelta
 from gensim.models import KeyedVectors
 from sklearn.decomposition import MiniBatchDictionaryLearning
 
-TRAIN = True
-ANALYZE = True
+IS_TRAINING = True
+IS_ANALYSIS = True
+DICTIONARY_FILENAME = "w2v_50_dictionary.model"
 words = ["bank", "cut", "bass", "tie", "chips", "mouse", "crane"]
 
 def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
@@ -19,15 +21,16 @@ def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
     return embeddings
 
 # Load Word2VecKeyedVectors object
-model_wv = KeyedVectors.load_word2vec_format('../whatever2vec/w2n2v.embeddings', binary=False)
+# model_wv = KeyedVectors.load_word2vec_format('../whatever2vec/w2n2v.embeddings', binary=False)
+model_wv = KeyedVectors.load('../models/w2v/vectors/vectors.50.vw')
 
 # Only sample N word embeddings
 selected_df = sample_embeddings(model_wv,
                                 words=words,
-                                restrict_vocab=1000)
+                                restrict_vocab=10000)
 print(selected_df.shape)
 
-if TRAIN:
+if IS_TRAINING:
     # Train dictionary learning model
     num_cpus = multiprocessing.cpu_count()
     X = selected_df.values
@@ -39,14 +42,15 @@ if TRAIN:
     dictionary.fit(X)
     elapsed = time.time() - start
     print("Dictionary learning took " + str(timedelta(seconds=elapsed)))
-
+    # Dictionary learning took 0:07:00.324986 on 1000 words
+    # Dictionary learning took 2:09:44.087086 on 10000 words LOL
     # Save model
-    with open('dictionary.model', 'wb') as f:
+    with open(DICTIONARY_FILENAME, 'wb') as f:
         pickle.dump(dictionary, f)
 
 # Analyze "atoms of discourse"
-if ANALYZE:
-    with open("dictionary.model", 'rb') as f:
+if IS_ANALYSIS:
+    with open(DICTIONARY_FILENAME, 'rb') as f:
         dictionary = pickle.load(f)
     basis_vectors = dictionary.components_
     for word in words:
