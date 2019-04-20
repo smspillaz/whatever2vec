@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import numpy as np
 import pandas as pd
@@ -9,8 +10,16 @@ from sklearn.decomposition import MiniBatchDictionaryLearning
 
 IS_TRAINING = True
 IS_ANALYSIS = True
-DICTIONARY_FILENAME = "w2v_50_dictionary.model"
-words = ["bank", "cut", "bass", "tie", "chips", "mouse", "crane"]
+EMBEDDING_SIZE = 50
+VOCAB_SIZE = 10000
+words = ["bank", "cut", "bass", "tie", "chips", "mouse", "crane", "spring"]
+
+parser = argparse.ArgumentParser(description=None)
+parser.add_argument('--model', default='', type=str,
+                    choices=('word2node2vec', 'word2vec', 'lm'),
+                    help='Type of word embedding model to load')
+args = parser.parse_args()
+DICTIONARY_FILENAME = f"dict_{args.model}_{EMBEDDING_SIZE}_vocab={VOCAB_SIZE}.model"
 
 def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
     embeddings = pd.DataFrame(model_wv.wv.syn0[:restrict_vocab])
@@ -21,13 +30,17 @@ def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
     return embeddings
 
 # Load Word2VecKeyedVectors object
-# model_wv = KeyedVectors.load_word2vec_format('../whatever2vec/w2n2v.embeddings', binary=False)
-model_wv = KeyedVectors.load('../models/w2v/vectors/vectors.50.vw')
+if args.model == 'word2node2vec':
+    model_wv = KeyedVectors.load_word2vec_format('../whatever2vec/w2n2v.embeddings', binary=False)
+elif args.model == 'word2vec':
+    model_wv = KeyedVectors.load(f'../models/w2v/vectors/vectors.{EMBEDDING_SIZE}.vw')
+elif args.model == 'lm':
+    model_wv = KeyedVectors.load(f'../models/w2v/vectors/lm/WT103.24h.QRNN.{EMBEDDING_SIZE}.vw')
 
 # Only sample N word embeddings
 selected_df = sample_embeddings(model_wv,
                                 words=words,
-                                restrict_vocab=10000)
+                                restrict_vocab=VOCAB_SIZE)
 print(selected_df.shape)
 
 if IS_TRAINING:
