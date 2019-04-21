@@ -68,4 +68,5 @@ def options(model_name):
     parser.add_argument("--test", type=str, help="The test sentences file")
     parser.add_argument("--save", type=str, help="Where to save the model to")
     parser.add_argument("--load", type=str, help="Where to load the model from")
+    parser.add_argument("--sg", action='store_true', help="Use skip-gram")
     return parser.parse_args()
