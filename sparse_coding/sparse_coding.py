@@ -41,8 +41,8 @@ def get_sparse_code(dictionary, model_wv, word):
     embedding = embedding.reshape(1, -1)  # (1, 50)
     sparse_code = dictionary.transform(embedding)  # (1, 2000)
     sparse_code = sparse_code.flatten()  # (2000, )
-    atom_indices = np.where(sparse_code > 0)
-    print("\n\tAtoms: " + str(atoms_indices))
+    atom_indices = np.where(sparse_code > 0)[0]
+    print("\n\tAtoms: " + str(atom_indices))
     # The activated atoms' embddings are the dictionary's basis vectors
     # with non-zero coefficients
     atom_embeddings = dictionary.components_[sparse_code > 0]
@@ -123,7 +123,8 @@ if IS_ANALYSIS:
         sns.heatmap(similarities_df[idx[i]], ax=ax,
                     annot=words_df[idx[i]], fmt="", cmap=cmap,
                     yticklabels=False,  # Hide y-axis labels
-                    cbar=(i==0))
+                    cbar=(i==0), vmin=0.4, vmax=1,
+                    cbar_kws={'label': 'Similarity to atom of discourse'})
         ax.vlines(demarcations[i], *ax.get_ylim(), colors='deepskyblue', lw=4)
         ax.set_xticklabels(word_labels[i])
         ax.xaxis.tick_top()
