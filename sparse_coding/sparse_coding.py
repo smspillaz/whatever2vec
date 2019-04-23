@@ -8,7 +8,7 @@ import pickle
 import time
 from datetime import timedelta
 from gensim.models import KeyedVectors
-from sklearn.decomposition import MiniBatchDictionaryLearning
+from sklearn.decomposition import DictionaryLearning, MiniBatchDictionaryLearning
 
 IS_TRAINING = True
 IS_ANALYSIS = True
@@ -24,11 +24,14 @@ parser.add_argument('--model', default='', type=str,
                     choices=('word2node2vec', 'word2vec', 'lm2vec'),
                     help='Type of word embedding model to load')
 args = parser.parse_args()
-DICTIONARY_FILENAME = f"dict_{args.model}_{EMBEDDING_SIZE}_vocab={VOCAB_SIZE}_components={COMPONENT_SIZE}.model"
+DICTIONARY_FILENAME = f"dict_notbatched_fullvocab_{args.model}_{EMBEDDING_SIZE}_vocab={VOCAB_SIZE}_components={COMPONENT_SIZE}.model"
 
 
 def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
-    embeddings = pd.DataFrame(model_wv.wv.syn0[:restrict_vocab])
+    if restrict_vocab:
+        embeddings = pd.DataFrame(model_wv.wv.syn0[:restrict_vocab])
+    else:
+        embeddings = pd.DataFrame(model_wv.wv.syn0)
     for i, word in enumerate(words):
         embedding = model_wv.get_vector(word)
         # Just overwrite
@@ -55,23 +58,28 @@ if args.model == 'word2node2vec':
     model_wv = KeyedVectors.load_word2vec_format('../whatever2vec/w2n2v.embeddings_new', binary=False)
 elif args.model == 'word2vec':
     model_wv = KeyedVectors.load(f'../models/w2v/vectors/vectors.{EMBEDDING_SIZE}.vw')
-elif args.model == 'lm':
+elif args.model == 'lm2vec':
     model_wv = KeyedVectors.load(f'../models/w2v/vectors/lm/WT103.24h.QRNN.{EMBEDDING_SIZE}.vw')
 
 # Only sample N word embeddings
 selected_df = sample_embeddings(model_wv,
                                 words=test_words,
-                                restrict_vocab=VOCAB_SIZE)
+                                # restrict_vocab=VOCAB_SIZE)
+                                restrict_vocab=None)
 print(selected_df.shape)
 
 if IS_TRAINING:
     # Train dictionary learning model
     num_cpus = multiprocessing.cpu_count()
     X = selected_df.values
-    dictionary = MiniBatchDictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
+    # dictionary = MiniBatchDictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
+                                             # transform_algorithm='lars',
+                                             # transform_n_nonzero_coefs=5, verbose=1,
+                                             # n_jobs=num_cpus, batch_size=16, n_iter=1000)
+    dictionary = DictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
                                              transform_algorithm='lars',
                                              transform_n_nonzero_coefs=5, verbose=1,
-                                             n_jobs=num_cpus, batch_size=16, n_iter=1000)
+                                             n_jobs=num_cpus)
     start = time.time()
     dictionary.fit(X)
     elapsed = time.time() - start
@@ -133,3 +141,43 @@ if IS_ANALYSIS:
               y=2.4)
     plt.savefig(f"results/full_tables/{args.model}_{EMBEDDING_SIZE}_components={COMPONENT_SIZE}.png")
     plt.show()
+
+if SHOW_SUBSET:
+
+    # Plot subset of words only, not the full table
+    show_subset = False
+    subset_words = ['chips', 'helsinki']
+    if show_subset:
+        cmap = sns.cubehelix_palette(light=1, as_cmap=True)
+        similarities_df = pd.DataFrame()
+        words_df = pd.DataFrame()
+        # For vertical demarcations in heatmap
+        demarcations = []
+        demarcation_i = 0
+        word_labels = []
+        for word in subset_words:
+            demarcations.append(demarcation_i)
+            print(f"\n\tWord: {word}")
+            atom_indices, atom_embeddings = get_sparse_code(dictionary,
+                                                            model_wv, word)
+            # Get closest words to each atom of discourse
+            for i, atom in enumerate(activated_atoms):
+                word_labels.append(word)
+                demarcation_i += 1
+                similar_words = model_wv.similar_by_vector(atom, topn=10)
+                print(similar_words)
+
+                words, similarities = zip(*similar_words)
+                similarities_df[f"{word}_{i}"] = similarities
+                words_df[f"{word}_{i}"] = words
+
+        ax = sns.heatmap(similarities_df, annot=words_df, fmt="", cmap=cmap,
+                         yticklabels=False)  # Hide y-axis labels
+        ax.vlines(demarcations, *ax.get_ylim())
+        ax.set_xticklabels(word_labels)
+        ax.xaxis.tick_top()
+        ax.tick_params(left=False, top=False)  # Hide ticks
+        plt.title(f"{args.model}_{EMBEDDING_SIZE} with {COMPONENT_SIZE} components",
+                  y=1.3)
+        plt.show()
+
