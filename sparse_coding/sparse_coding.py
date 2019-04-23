@@ -16,6 +16,7 @@ EMBEDDING_SIZE = 50
 VOCAB_SIZE = 10000
 # COMPONENT_SIZE = 2000
 COMPONENT_SIZE = 500
+BATCH_SIZE = 1024
 test_words = ["bank", "bass", "tie", "chips", "mouse", "crane", "spring",
               "light", "star", "helsinki", "finland"]
 
@@ -24,7 +25,7 @@ parser.add_argument('--model', default='', type=str,
                     choices=('word2node2vec', 'word2vec', 'lm2vec'),
                     help='Type of word embedding model to load')
 args = parser.parse_args()
-DICTIONARY_FILENAME = f"dict_notbatched_fullvocab_{args.model}_{EMBEDDING_SIZE}_vocab={VOCAB_SIZE}_components={COMPONENT_SIZE}.model"
+DICTIONARY_FILENAME = f"dict_fullvocab_bs={BATCH_SIZE}_{args.model}_{EMBEDDING_SIZE}_vocab={VOCAB_SIZE}_components={COMPONENT_SIZE}.model"
 
 
 def sample_embeddings(model_wv, words=[], restrict_vocab=10000):
@@ -72,14 +73,14 @@ if IS_TRAINING:
     # Train dictionary learning model
     num_cpus = multiprocessing.cpu_count()
     X = selected_df.values
-    # dictionary = MiniBatchDictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
-                                             # transform_algorithm='lars',
-                                             # transform_n_nonzero_coefs=5, verbose=1,
-                                             # n_jobs=num_cpus, batch_size=16, n_iter=1000)
-    dictionary = DictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
+    dictionary = MiniBatchDictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
                                              transform_algorithm='lars',
                                              transform_n_nonzero_coefs=5, verbose=1,
-                                             n_jobs=num_cpus)
+                                             n_jobs=num_cpus, batch_size=BATCH_SIZE, n_iter=1000)
+    # dictionary = DictionaryLearning(n_components=COMPONENT_SIZE, fit_algorithm='lars',
+    #                                          transform_algorithm='lars',
+    #                                          transform_n_nonzero_coefs=5, verbose=1,
+    #                                          n_jobs=num_cpus)
     start = time.time()
     dictionary.fit(X)
     elapsed = time.time() - start
