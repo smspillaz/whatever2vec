@@ -2,9 +2,36 @@
 
 By @christabella, @NightmareNyx and @smspillaz
 
-We present a comprehensive comparison of word vector generation models using the skip-gram algorithm, the continuous bag of words algorithm (Mikolov et al.), the AWD-LSTM model (Merity et al.) and Node2Vec over a graph of words (Grover et al.). We also compare word senses using the approach given in Arora et al.
+We present a comprehensive comparison of word vector generation models using the skip-gram algorithm, the continuous bag of words algorithm (Mikolov et al.), the AWD-LSTM model (Merity et al.) and Node2Vec over a graph of words (Grover et al.). We also compare word senses using the approach given in Arora et al. Results are over the [WikiText-103 dataset](https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/).
 
 The results of our experiments can be found in the [results](https://github.com/smspillaz/whatever2vec/tree/master/results) directory.
+
+## Generating the word vectors.
+
+### Word2Node2Vec vectors
+
+Use something like:
+
+    python word2node2vec/word2node2vec.py --train data/wiki.train.tokens --valid data/wiki.valid.tokens --test data/wiki.test.tokens --save vecs.out
+
+The saved vectors will be in `gensim.Word2Vec` format, you can load them and save the underlying `KeyedVectors` for testing.
+
+### LM2Word2Vec vectors
+
+First, train the language model:
+
+    pushd submodules/awd-lstm-lm;
+    python -u main.py --epochs 14 --nlayers 4 --emsize 400 --nhid 2500 --alpha 0 --beta 0 --dropoute 0 --dropouth 0.1 --dropouti 0.1 --dropout 0.1 --wdrop 0 --wdecay 0 --bptt 140 --batch_size 60 --optimizer adam --lr 1e-3 --data data/wikitext-103 --save WT103.12hr.QRNN.pt --when 12 --model QRNN
+    popd
+
+This will also save the corpus/dictionary to `submodules/awd-lstm-lm/corpus.[md5].data` where `[md5]` is an MD5 hash of the path
+of the corpus itself.
+
+Then convert to gensim format with:
+
+    pushd submodules/awd-lstm-lm;
+    python -u lm2word2vec.py --model WT103.12hr.QRNN.pt --dictionary submodules/awd-lstm-lm/corpus.[md5].data --output WT103.12hr.QRNN.pt.vw
+    popd
 
 ## Running tests on word vectors
 
