@@ -29,7 +29,7 @@ def main():
     if args.load:
         vectors = KeyedVectors.load(args.load, mmap='r')
     else:
-        vectors = train(list(yield_sentences(args.train)), save=args.save)
+        vectors = train(list(yield_sentences(args.train)), save=args.save, sg=1 if args.sg else 0)
 
 
 if __name__ == "__main__":
