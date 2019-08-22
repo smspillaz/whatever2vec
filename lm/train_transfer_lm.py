@@ -60,11 +60,12 @@ def train_loop(model,
 
         train_bar = tqdm(train_loader, desc="train")
         for i, batch in enumerate(train_bar):
-            input_ids, input_mask, segment_ids, lm_label_ids, is_next = tuple(t.to(device) for t in batch)
+            batch = all_to_device(batch, device)
+            # input_ids, input_mask, segment_ids, lm_label_ids, is_next = tuple(t.to(device) for t in batch)
             if model_type == "bert":
-                loss = model(input_ids, input_mask, segment_ids, masked_lm_labels=lm_label_ids, next_sentence_label=is_next)[0]
+                loss = model(*batch)[0] # input_ids, input_mask, segment_ids, masked_lm_labels=lm_label_ids, next_sentence_label=is_next)[0]
             elif model_type == "xlnet":
-                loss = model(input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
+                loss = model(batch) # input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
 
             optimizer.zero_grad()
             loss.backward()
@@ -86,7 +87,13 @@ def train_loop(model,
         with torch.no_grad():
             val_bar = tqdm(val_loader, desc="val")
             for i, batch in enumerate(val_bar):
-                loss = model(*tuple(t.to(device) for t in batch))[0]
+                batch = all_to_device(batch, device)
+                # input_ids, input_mask, segment_ids, lm_label_ids, is_next = tuple(t.to(device) for t in batch)
+                if model_type == "bert":
+                    loss = model(*batch)[0] # input_ids, input_mask, segment_ids, masked_lm_labels=lm_label_ids, next_sentence_label=is_next)[0]
+                elif model_type == "xlnet":
+                    loss = model(batch) # input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
+
                 val_bar.set_postfix({
                     "loss": loss.item()
                 })
