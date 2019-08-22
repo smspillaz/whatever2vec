@@ -3,6 +3,7 @@
 import argparse
 import os
 import json
+import pickle
 import logging
 import random
 import sys
@@ -317,29 +318,39 @@ class BERTDataset(Dataset):
 
         # load samples into memory
         if on_memory:
-            self.all_docs = []
-            doc = []
-            self.corpus_lines = 0
-            with open(corpus_path, "r", encoding=encoding) as f:
-                for line in tqdm(f, desc="Loading Dataset", total=corpus_lines):
-                    line = line.strip()
-                    if line == "" and len(doc):
-                        self.all_docs.append(doc)
-                        doc = []
-                        #remove last added sample because there won't be a subsequent line anymore in the doc
-                        self.sample_to_doc.pop()
-                    elif len(line):
-                        #store as one sample
-                        sample = {"doc_id": len(self.all_docs),
-                                  "line": len(doc)}
-                        self.sample_to_doc.append(sample)
-                        doc.append(line)
-                        self.corpus_lines = self.corpus_lines + 1
+            pickle_path = ".".join([corpus_path, "bert.features.pt"])
+            try:
+                with open(pickle_path, "rb") as f:
+                    self.corpus_lines, self.all_docs, self.sample_to_doc = pickle.load(f)
+                    print("Loaded BERT features from cache")
+            except IOError:
+                self.all_docs = []
+                doc = []
+                self.corpus_lines = 0
+                with open(corpus_path, "r", encoding=encoding) as f:
+                    for line in tqdm(f, desc="Loading Dataset", total=corpus_lines):
+                        line = line.strip()
+                        tokens = self.tokenizer.tokenize(line)
+                        if not tokens and len(doc):
+                            self.all_docs.append(doc)
+                            doc = []
+                            #remove last added sample because there won't be a subsequent line anymore in the doc
+                            self.sample_to_doc.pop()
+                        elif len(line):
+                            #store as one sample
+                            sample = {"doc_id": len(self.all_docs),
+                                      "line": len(doc)}
+                            self.sample_to_doc.append(sample)
+                            doc.append(line)
+                            self.corpus_lines = self.corpus_lines + 1
 
-            # if last row in file is not empty
-            if self.all_docs[-1] != doc:
-                self.all_docs.append(doc)
-                self.sample_to_doc.pop()
+                # if last row in file is not empty
+                if self.all_docs[-1] != doc and len(doc):
+                    self.all_docs.append(doc)
+                    self.sample_to_doc.pop()
+
+                with open(pickle_path, "wb") as pf:
+                    pickle.dump((self.corpus_lines, self.all_docs, self.sample_to_doc), pf, protocol=pickle.HIGHEST_PROTOCOL)
 
             self.num_docs = len(self.all_docs)
 
