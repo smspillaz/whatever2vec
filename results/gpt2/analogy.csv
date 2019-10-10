@@ -1,0 +1,2 @@
+model,google-analogies.csv,jair.csv,msr.csv,sat.csv,semeval.csv
+gpt2.768.wv,0.559767,0.27122873,0.6360773,0.26080188,0.27683973
