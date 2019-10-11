@@ -1,0 +1,2 @@
+model,google-analogies.csv,jair.csv,msr.csv,sat.csv,semeval.csv
+gpt2-medium-pretrained.768.wv,0.5698356,0.27386296,0.6519416,0.2749324,0.28939998

@@ -1,0 +1,2 @@
+model,mc-30.csv,men.csv,mturk-287.csv,mturk-771.csv,rg-65.csv,rw.csv,semeval17.csv,simverb-3500.csv,verb-143.csv,wordsim353-rel.csv,wordsim353-sim.csv,yp-130.csv
+bert-large-uncased-whole-word-masking-pretrained.768.wv,0.34490484,0.39381486,0.4650947,0.4635118,0.3340189,0.5049349,0.36532745,0.9495214,0.33181286,0.44004357,0.38026807,0.33104166

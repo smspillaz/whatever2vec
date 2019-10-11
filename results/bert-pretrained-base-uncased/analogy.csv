@@ -1,0 +1,2 @@
+model,google-analogies.csv,jair.csv,msr.csv,sat.csv,semeval.csv
+bert-base-uncased-pretrained.768.wv,0.54453385,0.288752,0.61452025,0.27880746,0.2850245

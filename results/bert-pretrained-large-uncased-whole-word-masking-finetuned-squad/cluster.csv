@@ -1,0 +1,2 @@
+model,ap.csv,battig.csv,bless.csv,essli-2008.csv
+bert-large-uncased-whole-word-masking-finetuned-squad-pretrained.768.wv,0.3216988694831018,0.3782470713584824,0.4369368832027514,0.49490551849022246

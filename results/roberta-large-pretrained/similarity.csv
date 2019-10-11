@@ -1,0 +1,2 @@
+model,mc-30.csv,men.csv,mturk-287.csv,mturk-771.csv,rg-65.csv,rw.csv,semeval17.csv,simverb-3500.csv,verb-143.csv,wordsim353-rel.csv,wordsim353-sim.csv,yp-130.csv
+roberta-large-pretrained.768.wv,0.26803896,0.1764703,0.1445097,0.18049164,0.25496262,0.23025216,0.21728988,0.71382207,0.25669912,0.18907645,0.15569967,0.25525916

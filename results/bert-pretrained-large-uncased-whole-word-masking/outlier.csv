@@ -1,0 +1,2 @@
+model,8-8-8.csv,wikisem500.csv
+bert-large-uncased-whole-word-masking-pretrained.768.wv,0.75390625,0.587132738095238

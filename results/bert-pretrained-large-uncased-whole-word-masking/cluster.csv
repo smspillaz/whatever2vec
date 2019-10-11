@@ -1,0 +1,2 @@
+model,ap.csv,battig.csv,bless.csv,essli-2008.csv
+bert-large-uncased-whole-word-masking-pretrained.768.wv,0.32745980089178484,0.3516437285902232,0.4380108946616067,0.6543543411795432

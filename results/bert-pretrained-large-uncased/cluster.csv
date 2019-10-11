@@ -1,0 +1,2 @@
+model,ap.csv,battig.csv,bless.csv,essli-2008.csv
+bert-large-uncased-pretrained.768.wv,0.30424897692257297,0.29269507909770803,0.39966243743233854,0.46674071400235395

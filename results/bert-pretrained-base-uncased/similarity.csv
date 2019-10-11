@@ -1,0 +1,2 @@
+model,mc-30.csv,men.csv,mturk-287.csv,mturk-771.csv,rg-65.csv,rw.csv,semeval17.csv,simverb-3500.csv,verb-143.csv,wordsim353-rel.csv,wordsim353-sim.csv,yp-130.csv
+bert-base-uncased-pretrained.768.wv,0.26538208,0.21042228,0.1869837,0.23735769,0.25379476,0.23909052,0.23200452,0.75056165,0.25722188,0.24246542,0.19862603,0.2572612

@@ -1,0 +1,2 @@
+model,mc-30.csv,men.csv,mturk-287.csv,mturk-771.csv,rg-65.csv,rw.csv,semeval17.csv,simverb-3500.csv,verb-143.csv,wordsim353-rel.csv,wordsim353-sim.csv,yp-130.csv
+gpt2-pretrained.768.wv,0.25624886,0.19781066,0.23097527,0.24985626,0.23434599,0.28882313,0.22123022,0.76008457,0.23158717,0.23710512,0.18455501,0.23201436
