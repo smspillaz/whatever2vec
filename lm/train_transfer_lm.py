@@ -23,6 +23,9 @@ from pytorch_transformers import (
     OpenAIGPTTokenizer,
     GPT2Model,
     GPT2Tokenizer,
+    RobertaForMaskedLM,
+    RobertaConfig,
+    RobertaTokenizer,
     TransfoXLModel,
     TransfoXLTokenizer,
     XLNetConfig,
@@ -40,7 +43,8 @@ MODELS = [(BertForPreTraining, BertTokenizer,   'bert-base-uncased'),
           (GPT2Model,        GPT2Tokenizer,      'gpt2'),
           (TransfoXLModel,   TransfoXLTokenizer, 'transfo-xl-wt103'),
           (XLNetLMHeadModel, XLNetTokenizer,     'xlnet-base-cased'),
-          (XLMModel,        XLMTokenizer,       'xlm-mlm-enfr-1024')]
+          (XLMModel,        XLMTokenizer,       'xlm-mlm-enfr-1024'),
+          (RobertaForMaskedLM, RobertaTokenizer, 'roberta-base')]
 
 
 def train_loop(model,
@@ -64,10 +68,17 @@ def train_loop(model,
         for i, batch in enumerate(train_bar):
             batch = all_to_device(batch, device)
             # input_ids, input_mask, segment_ids, lm_label_ids, is_next = tuple(t.to(device) for t in batch)
-            if model_type == "bert":
+            if model_type == "bert" or model_type == "roberta":
                 loss = model(*batch)[0] # input_ids, input_mask, segment_ids, masked_lm_labels=lm_label_ids, next_sentence_label=is_next)[0]
             elif model_type == "xlnet":
-                loss = model(batch) # input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
+                input_ids, input_mask, segment_ids, lm_label_ids = (
+                    batch["input"],
+                    batch["is_masked"],
+                    batch["seg_id"],
+                    batch["label"]
+                )
+                input_ids, input_mask, segment_ids, lm_label_ids, is_next = batch
+                loss = model(input_ids, segment_ids, input_mask, labels=lm_label_ids) # input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
 
             optimizer.zero_grad()
             loss.backward()
@@ -91,7 +102,7 @@ def train_loop(model,
             for i, batch in enumerate(val_bar):
                 batch = all_to_device(batch, device)
                 # input_ids, input_mask, segment_ids, lm_label_ids, is_next = tuple(t.to(device) for t in batch)
-                if model_type == "bert":
+                if model_type == "bert" or model_type == "roberta":
                     loss = model(*batch)[0] # input_ids, input_mask, segment_ids, masked_lm_labels=lm_label_ids, next_sentence_label=is_next)[0]
                 elif model_type == "xlnet":
                     loss = model(batch) # input_ids, input_mask, segment_ids, labels=lm_label_ids)[0]
@@ -1004,30 +1015,45 @@ class XLNetModelWithPermutations(nn.Module):
         return loss
 
 
-def model_and_tokenizer(model_type, do_lower_case=True):
+def model_and_tokenizer(model_type, do_lower_case=True, pretrained=False):
     """Get the model and tokenizer."""
     if model_type == "bert":
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",
-                                                do_lower_case=True)
-        config = BertConfig(
-            vocab_size_or_config_json_file=len(list(tokenizer.vocab.keys())),
-            hidden_size=768,
-            num_hidden_layers=12,
-            num_attention_heads=12,
-            intermediate_size=3072,
-            hidden_act="gelu",
-            hidden_dropout_prob=0.1,
-            attention_probs_dropout_prob=0.1,
-            max_position_embeddings=512,
-            type_vocab_size=2,
-            initializer_range=0.02
-        )
-        model = BertForPreTraining(config)
+                                                 do_lower_case=True)
+
+        if not pretrained:
+            config = BertConfig(
+                vocab_size_or_config_json_file=len(list(tokenizer.vocab.keys())),
+                hidden_size=768,
+                num_hidden_layers=12,
+                num_attention_heads=12,
+                intermediate_size=3072,
+                hidden_act="gelu",
+                hidden_dropout_prob=0.1,
+                attention_probs_dropout_prob=0.1,
+                max_position_embeddings=512,
+                type_vocab_size=2,
+                initializer_range=0.02
+            )
+            model = BertForPreTraining(config)
+        else:
+            config = BertConfig.from_pretrained("bert-base-uncased")
+            model = BertForPreTraining.from_pretrained("bert-base-uncased")
+
     elif model_type == "xlnet":
         tokenizer = XLNetTokenizer.from_pretrained("xlnet-base-cased",
                                                    do_lower_case=True)
         config = XLNetConfig.from_pretrained("xlnet-base-cased")
-        model = XLNetModelWithPermutations(config)
+
+        if not pretrained:
+            model = XLNetModelWithPermutations(config)
+        else:
+            model = XLNetLMHeadModel.from_pretrained("xlnet-base-cased")
+    else:
+        tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        assert pretrained == True
+        config = RobertaConfig.from_pretrained("roberta-base")
+        model = RobertaForMaskedLM.from_pretrained("roberta-base")
 
     return tokenizer, config, model
 
@@ -1057,6 +1083,11 @@ def datasets(model_type, tokenizer, train_corpus, val_corpus, seq_len):
                          6,
                          1)
        )
+    elif model_type == "roberta":
+        return (
+            BERTDataset(train_corpus, tokenizer, seq_len=seq_len),
+            BERTDataset(val_corpus, tokenizer, seq_len=seq_len)
+        )
 
 
 def main():
@@ -1073,7 +1104,8 @@ def main():
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--grad-accum-steps", default=1)
     parser.add_argument("--batch-size", default=32, type=int)
-    parser.add_argument("--model-type", choices=("bert", "xlnet"), type=str)
+    parser.add_argument("--model-type", choices=("bert", "xlnet", "roberta"), type=str)
+    parser.add_argument("--pretrained", action="store_true")
 
     args = parser.parse_args()
     args.batch_size = args.batch_size // args.grad_accum_steps
@@ -1084,10 +1116,10 @@ def main():
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
-    
+
     os.makedirs(args.output_directory, exist_ok=True)
 
-    tokenizer, config, model = model_and_tokenizer(args.model_type)
+    tokenizer, config, model = model_and_tokenizer(args.model_type, pretrained=args.pretrained)
     model = model.to(args.device)
 
     train_dataset, val_dataset = datasets(args.model_type,
