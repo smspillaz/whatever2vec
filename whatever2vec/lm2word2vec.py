@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--embeddings-layer", required=True, type=str)
     parser.add_argument("--dictionary", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--transpose", action="store_true")
     args = parser.parse_args()
 
     dictionary = load_dictionary(args.dictionary)
@@ -80,6 +81,9 @@ def main():
         embeddings = model[args.embeddings_layer].cpu().numpy()
     except KeyError:
         raise RuntimeError("Couldn't get {}, keys are {}".format(args.embeddings_layer, model.keys()))
+
+    if args.transpose:
+        embeddings = embeddings.T
 
     kv = KeyedVectors(embeddings.shape[1])
     kv.syn0 = embeddings
