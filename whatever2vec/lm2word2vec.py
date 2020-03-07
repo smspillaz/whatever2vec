@@ -6,6 +6,8 @@ import os
 import json
 import torch
 
+import pytorch_transformers
+
 from gensim.models import KeyedVectors
 from gensim.models.keyedvectors import Vocab
 
@@ -26,10 +28,26 @@ def load_dictionary_json(path):
         }
 
 
+def get_one_of(object, attribs):
+    """Try to get the first one of attribs."""
+    for a in attribs:
+        v = getattr(object, a, None)
+        if v:
+            return v
+
+
+def load_dictionary_auto(path):
+    tokenizer = pytorch_transformers.AutoTokenizer.from_pretrained(path)
+    return {
+        v: k for k, v in get_one_of(tokenizer, ['vocab', 'encoder']).items()
+    }
+
+
 LOAD_DICTIONARY_DISPATCH = {
     ".pt": load_dictionary_pickle,
     ".txt": load_dictionary_txtlist,
-    ".json": load_dictionary_json
+    ".json": load_dictionary_json,
+    "": load_dictionary_auto
 }
 
 
@@ -49,7 +67,14 @@ def main():
     args = parser.parse_args()
 
     dictionary = load_dictionary(args.dictionary)
-    model = torch.load(args.model, map_location='cpu')
+
+    try:
+        model = torch.load(args.model, map_location='cpu')
+    except IOError:
+        model = pytorch_transformers.AutoModelWithLMHead.from_pretrained(args.model).state_dict()
+    except ValueError:
+        raise RuntimeError("Can't load model {}, either not on disk, "
+                           "or not such pretrained model exists".format(args.model))
 
     try:
         embeddings = model[args.embeddings_layer].cpu().numpy()
